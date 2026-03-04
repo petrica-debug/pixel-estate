@@ -11,7 +11,9 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
-    "test": "turbo run test"
+    "test": "turbo run test",
+    "deploy:web": "vercel --cwd apps/web",
+    "deploy:admin": "vercel --cwd apps/admin"
   },
   "devDependencies": {
     "turbo": "^2.8.13"
