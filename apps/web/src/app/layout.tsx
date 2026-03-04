@@ -1,21 +1,17 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "PixelEstate",
-  description: "Fractional Real Estate Ownership Platform via NFT Pixel Shares",
+  title: "PixelEstate | Fractional Real Estate on Blockchain",
+  description: "Own premium Dubai real estate through NFT pixel shares. Earn rental yields, trade on our marketplace, and participate in governance — all on Polygon.",
+  keywords: ["real estate", "NFT", "blockchain", "Dubai", "fractional ownership", "Polygon", "Web3"],
 };
 
 export default function RootLayout({
@@ -24,10 +20,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+    <html lang="en" className="dark">
+      <body className={`${inter.variable} font-sans antialiased`}>
         <Providers>
           {children}
         </Providers>
