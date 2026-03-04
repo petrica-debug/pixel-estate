@@ -1,0 +1,1 @@
+node_modules/\n.next/\ndist/\nbuild/\n.turbo/\n.env\n.env.*\n!.env.example\ncoverage/\n.nyc_output/\n*.log\n.DS_Store
