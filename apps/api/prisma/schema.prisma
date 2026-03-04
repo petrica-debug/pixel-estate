@@ -1,0 +1,306 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id              String    @id @default(cuid())
+  email           String?   @unique
+  walletAddress   String    @unique
+  displayName     String?
+  avatarUrl       String?
+  kycStatus       KYCStatus @default(PENDING)
+  kycProvider     String?                      // "sumsub" | "onfido"
+  kycExternalId   String?
+  kycVerifiedAt   DateTime?
+  nationality     String?
+  residenceCountry String?
+  riskScore       Int?
+  role            UserRole  @default(INVESTOR)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  pixels          PixelOwnership[]
+  rentalClaims    RentalClaim[]
+  votes           Vote[]
+  listings        MarketplaceListing[]
+  purchases       MarketplacePurchase[]
+  notifications   Notification[]
+  kycDocuments    KYCDocument[]
+}
+
+enum KYCStatus {
+  PENDING
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum UserRole {
+  INVESTOR
+  ADMIN
+  PROPERTY_MANAGER
+  SUPER_ADMIN
+}
+
+model Property {
+  id              String          @id @default(cuid())
+  onChainId       Int             @unique           // maps to smart contract propertyId
+  name            String
+  slug            String          @unique
+  description     String
+  location        String
+  city            String          @default("Dubai")
+  country         String          @default("UAE")
+  areaSqft        Float
+  bedrooms        Int?
+  bathrooms       Int?
+  propertyType    PropertyType
+  valuationUsd    Decimal
+  totalPixels     Int
+  mintedPixels    Int             @default(0)
+  pricePerPixel   Decimal
+  expectedYield   Decimal                           // annual yield %
+  status          PropertyStatus  @default(UPCOMING)
+  imageUrl        String                            // high-res (pixel grid source)
+  thumbnailUrl    String
+  galleryUrls     String[]
+  metadataIpfsHash String?
+  legalDocsIpfsHash String?
+  dldReference    String?                           // Dubai Land Department reference
+  spvName         String?                           // SPV entity name
+  spvLicense      String?
+  launchDate      DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  pixels          PixelOwnership[]
+  rentalPeriods   RentalPeriod[]
+  saleProposals   SaleProposal[]
+  listings        MarketplaceListing[]
+}
+
+enum PropertyType {
+  APARTMENT
+  VILLA
+  TOWNHOUSE
+  PENTHOUSE
+  COMMERCIAL
+  HOTEL_UNIT
+}
+
+enum PropertyStatus {
+  UPCOMING
+  ACTIVE          // minting open
+  FULLY_MINTED    // all pixels sold
+  RENTING         // generating income
+  SALE_PROPOSED   // vote in progress
+  SOLD            // liquidated
+  PAUSED
+}
+
+model PixelOwnership {
+  id              String    @id @default(cuid())
+  userId          String
+  propertyId      String
+  pixelIndexes    Int[]                             // array of owned pixel indexes
+  acquiredAt      DateTime  @default(now())
+  acquiredVia     AcquisitionType
+  txHash          String?                           // blockchain tx hash
+
+  user            User      @relation(fields: [userId], references: [id])
+  property        Property  @relation(fields: [propertyId], references: [id])
+
+  @@index([userId, propertyId])
+}
+
+enum AcquisitionType {
+  PRIMARY_MINT
+  SECONDARY_PURCHASE
+  TRANSFER
+}
+
+model RentalPeriod {
+  id              String    @id @default(cuid())
+  propertyId      String
+  periodIndex     Int                               // matches on-chain periodIndex
+  totalAmountUsd  Decimal
+  startDate       DateTime
+  endDate         DateTime
+  distributedAt   DateTime?
+  txHash          String?
+  status          RentalStatus @default(PENDING)
+
+  property        Property  @relation(fields: [propertyId], references: [id])
+  claims          RentalClaim[]
+
+  @@unique([propertyId, periodIndex])
+}
+
+enum RentalStatus {
+  PENDING
+  DEPOSITED       // funds deposited to contract
+  CLAIMABLE       // users can claim
+  COMPLETED       // all claimed or expired
+}
+
+model RentalClaim {
+  id              String    @id @default(cuid())
+  userId          String
+  rentalPeriodId  String
+  amountUsd       Decimal
+  pixelCount      Int
+  claimedAt       DateTime?
+  txHash          String?
+  status          ClaimStatus @default(UNCLAIMED)
+
+  user            User          @relation(fields: [userId], references: [id])
+  rentalPeriod    RentalPeriod  @relation(fields: [rentalPeriodId], references: [id])
+
+  @@unique([userId, rentalPeriodId])
+}
+
+enum ClaimStatus {
+  UNCLAIMED
+  CLAIMING        // tx submitted
+  CLAIMED
+  FAILED
+}
+
+model SaleProposal {
+  id              String    @id @default(cuid())
+  propertyId      String
+  proposedPriceUsd Decimal
+  proposerUserId  String
+  votesFor        Int       @default(0)
+  votesAgainst    Int       @default(0)
+  quorumRequired  Int                               // 66% of total pixels
+  deadline        DateTime
+  status          ProposalStatus @default(ACTIVE)
+  txHash          String?
+  createdAt       DateTime  @default(now())
+
+  property        Property  @relation(fields: [propertyId], references: [id])
+  votes           Vote[]
+}
+
+enum ProposalStatus {
+  ACTIVE
+  PASSED
+  FAILED
+  EXECUTED
+  CANCELLED
+}
+
+model Vote {
+  id              String    @id @default(cuid())
+  userId          String
+  proposalId      String
+  support         Boolean
+  pixelWeight     Int                               // how many pixels they hold = vote weight
+  txHash          String?
+  createdAt       DateTime  @default(now())
+
+  user            User          @relation(fields: [userId], references: [id])
+  proposal        SaleProposal  @relation(fields: [proposalId], references: [id])
+
+  @@unique([userId, proposalId])
+}
+
+model MarketplaceListing {
+  id              String    @id @default(cuid())
+  sellerId        String
+  propertyId      String
+  pixelIndexes    Int[]
+  pricePerPixel   Decimal
+  remainingPixels Int
+  status          ListingStatus @default(ACTIVE)
+  onChainListingId Int?
+  txHash          String?
+  createdAt       DateTime  @default(now())
+  expiresAt       DateTime?
+
+  seller          User      @relation(fields: [sellerId], references: [id])
+  property        Property  @relation(fields: [propertyId], references: [id])
+  purchases       MarketplacePurchase[]
+}
+
+enum ListingStatus {
+  ACTIVE
+  PARTIALLY_FILLED
+  FILLED
+  CANCELLED
+  EXPIRED
+}
+
+model MarketplacePurchase {
+  id              String    @id @default(cuid())
+  buyerId         String
+  listingId       String
+  pixelCount      Int
+  totalPriceUsd   Decimal
+  platformFeeUsd  Decimal
+  txHash          String?
+  createdAt       DateTime  @default(now())
+
+  buyer           User                @relation(fields: [buyerId], references: [id])
+  listing         MarketplaceListing  @relation(fields: [listingId], references: [id])
+}
+
+model Notification {
+  id              String    @id @default(cuid())
+  userId          String
+  type            NotificationType
+  title           String
+  body            String
+  read            Boolean   @default(false)
+  metadata        Json?
+  createdAt       DateTime  @default(now())
+
+  user            User      @relation(fields: [userId], references: [id])
+}
+
+enum NotificationType {
+  RENTAL_AVAILABLE
+  RENTAL_CLAIMED
+  PIXEL_PURCHASED
+  PIXEL_SOLD
+  VOTE_STARTED
+  VOTE_RESULT
+  KYC_APPROVED
+  KYC_REJECTED
+  PROPERTY_LAUNCHED
+  SALE_EXECUTED
+}
+
+model KYCDocument {
+  id              String    @id @default(cuid())
+  userId          String
+  documentType    String                            // passport, emirates_id, proof_of_address
+  fileUrl         String
+  status          String    @default("pending")
+  reviewedAt      DateTime?
+  reviewedBy      String?
+  createdAt       DateTime  @default(now())
+
+  user            User      @relation(fields: [userId], references: [id])
+}
+
+model BlockchainEvent {
+  id              String    @id @default(cuid())
+  txHash          String
+  blockNumber     Int
+  eventName       String
+  contractAddress String
+  args            Json
+  processedAt     DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([txHash])
+  @@index([eventName])
+  @@index([blockNumber])
+}

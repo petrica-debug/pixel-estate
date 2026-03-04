@@ -1,0 +1,41 @@
+
+> contracts@1.0.0 test
+> hardhat test
+
+[33m[1mWARNING:[22m[39m You are currently using Node.js v25.6.0, which is not supported by Hardhat. This can lead to unexpected behavior. See https://v2.hardhat.org/nodejs-versions
+
+
+[dotenv@17.3.1] injecting env (0) from ../../.env -- tip: ⚙️  override existing env vars with { override: true }
+
+
+  KYCRegistry
+    ✔ Should set KYC status for a user
+    ✔ Should batch set KYC status
+    ✔ Should not allow non-admin to set KYC status
+
+  Marketplace
+    ✔ Should list pixels
+    ✔ Should buy pixels
+    ✔ Should cancel listing
+
+  PixelEstate
+    ✔ Should mint pixels to user
+    ✔ Should not mint the same pixel twice (if we had a check, but currently it just adds to balance)
+
+  PropertyRegistry
+    ✔ Should register a property
+    ✔ Should update metadata
+    ✔ Should update property status
+
+  RentalDistributor
+    ✔ Should deposit rental
+    ✔ Should claim rental
+
+  SaleVoting
+    ✔ Should create a proposal
+    ✔ Should vote and execute proposal if quorum reached
+    ✔ Should fail to execute if quorum not reached
+
+
+  16 passing (1s)
+
